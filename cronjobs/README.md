@@ -86,6 +86,72 @@ Checks SSL cert expiry daily at 9am. Alerts when < 30 days remain.
 
 ---
 
+## Database Backup (daily)
+
+```bash
+hermes cron create \
+  --name "DB Backup — MySQL" \
+  --script db-backup.sh \
+  --schedule "0 2 * * *" \
+  --no-agent \
+  --deliver origin
+```
+
+**Env vars to set on the machine:**
+```bash
+export MYSQL_HOST=localhost
+export MYSQL_USER=backup
+export MYSQL_PASSWORD=...
+export S3_BACKUP_PATH=s3://my-bucket/backups
+```
+
+Then run with: `--s3` flag added to the script. Supports MySQL, PostgreSQL, MongoDB.
+Daily at 2am with 7-day retention by default.
+
+---
+
+## Log Rotation (weekly)
+
+```bash
+hermes cron create \
+  --name "Log Rotation" \
+  --script log-rotation.sh \
+  --schedule "0 4 * * 0" \
+  --no-agent \
+  --deliver origin
+```
+
+Runs Sundays at 4am. Cleans PM2 logs, app logs, journald, Docker container logs.
+Customize with env vars: `MAX_LOG_SIZE`, `LOG_RETENTION`, `JOURNALD_MAX`, `PM2_LOG_RETENTION`.
+
+**Test first:**
+```bash
+bash scripts/log-rotation.sh --dry-run
+```
+
+---
+
+## K8s Deploy (webhook-triggered)
+
+Not a cronjob — use as webhook action:
+
+```bash
+# Webhook prompt:
+Deploy <app> to K8s namespace <namespace>:
+bash scripts/deploy-k8s.sh <namespace> <app> --helm --tag=v1.2.3
+```
+
+Or schedule canary deployments:
+```bash
+hermes cron create \
+  --name "K8s Canary Deploy" \
+  --schedule "0 10 * * 1-5" \
+  --deliver origin \
+  --prompt "Run deploy-k8s.sh for staging namespace with latest tag. Report results."
+```
+
+---
+
 ## Custom: Any bash script
 
 ```bash

@@ -4,7 +4,7 @@ Production-ready DevOps/SRE workflow templates for [Hermes Agent](https://github
 
 ```
 📁 devops-workflow/
-├── scripts/          ← Bash/Python automation scripts
+├── scripts/          ← Bash automation scripts (8 scripts)
 ├── cronjobs/         ← Hermes cronjob config templates
 ├── webhooks/         ← Webhook handler templates (incident, deploy)
 ├── docker/           ← Docker Compose + Dockerfiles
@@ -52,6 +52,9 @@ hermes cron create \
 | [Incident Response](#incident-response) | `webhook` | AlertManager/Grafana → auto-triage + GitHub issue |
 | [Daily Status Report](#daily-status-report) | `cron + LLM` | Morning summary of PRs, issues, service status |
 | [SSL Certificate Monitor](#ssl-certificate-monitor) | `cron + bash` | Check cert expiry, alert < 30 days |
+| [K8s Deploy](#k8s-deploy) | `script` | kubectl apply / Helm upgrade + rollout watch |
+| [Database Backup](#database-backup) | `cron + bash` | MySQL/PostgreSQL/Mongo dump + S3 upload |
+| [Log Rotation](#log-rotation) | `cron + bash` | PM2, app logs, journald, Docker log cleanup |
 
 ---
 
@@ -106,8 +109,54 @@ Receives AlertManager/Grafana webhook → creates GitHub issue with diagnostic c
 LLM-powered morning briefing: pulls open PRs, recent issues, PM2 status, and system health into a single digest.
 
 ### SSL Certificate Monitor
-**File:** `cronjobs/ssl-check.md`  
+**File:** `scripts/ssl-check.sh`  
 Checks SSL cert expiry for configured domains, alerts when < 30 days remaining.
+
+### K8s Deploy
+**File:** `scripts/deploy-k8s.sh`  
+kubectl apply or Helm upgrade with rollout status watching. Supports `--dry-run`, `--tag`, and `--timeout`.
+
+```bash
+# kubectl mode
+bash scripts/deploy-k8s.sh production my-app
+
+# Helm mode with version tag
+bash scripts/deploy-k8s.sh staging my-app --helm --tag=v1.2.3
+
+# Dry run (verify before deploying)
+bash scripts/deploy-k8s.sh production my-app --helm --dry-run
+```
+
+### Database Backup
+**File:** `scripts/db-backup.sh`  
+Dump + compress + upload to S3. Supports MySQL, PostgreSQL, MongoDB. Auto-retention cleanup.
+
+```bash
+# Local backup (default)
+bash scripts/db-backup.sh mysql mydb
+
+# With S3 upload
+bash scripts/db-backup.sh postgres mydb --s3
+
+# Custom retention (30 days)
+bash scripts/db-backup.sh mongo mydb --s3 --retention=30
+```
+
+**Env vars:** `MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`, `POSTGRES_PASSWORD`, `MONGO_URI`, `S3_BACKUP_PATH`, `BACKUP_RETENTION`
+
+### Log Rotation
+**File:** `scripts/log-rotation.sh`  
+Rotates PM2 logs, app logs, journald, and Docker container logs. Safe defaults — test with `--dry-run` first.
+
+```bash
+# Dry run (see what would be deleted)
+bash scripts/log-rotation.sh --dry-run
+
+# Execute rotation
+bash scripts/log-rotation.sh
+```
+
+**Env vars:** `MAX_LOG_SIZE` (default 100M), `LOG_RETENTION` (default 14d), `JOURNALD_MAX` (default 500M), `PM2_LOG_RETENTION` (default 7d)
 
 ---
 
@@ -130,6 +179,9 @@ MEM_CRIT=200
 - **Hermes Agent** — for cronjob scheduling and delivery
 - **PM2** — optional, for service monitoring
 - **Docker** — optional, for container monitoring
+- **kubectl / Helm** — optional, for K8s deployments
+- **mysqldump / pg_dump / mongodump** — optional, for DB backups
+- **AWS CLI or rclone** — optional, for S3 backup uploads
 - **GitHub CLI (`gh`)** — optional, for incident auto-issue creation
 
 ---
