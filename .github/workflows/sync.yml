@@ -1,0 +1,28 @@
+name: Sync Template
+# Keeps this template repo in sync with downstream project repos
+# When you push changes here, PRs are created in projects using this template
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo:
+          - marine-org/marine-ai-oracle
+          - marine-org/marine-whale-oracle
+          - marine-org/marine-wave-oracle
+          - marine-org/marine-kraken-oracle
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create sync PR
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.SYNC_TOKEN }}
+          repository: ${{ matrix.repo }}
+          event-type: template-sync
+          client-payload: '{"source": "marine-org/devops-workflow", "ref": "${{ github.sha }}"}'

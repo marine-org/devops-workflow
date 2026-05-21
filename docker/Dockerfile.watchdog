@@ -1,0 +1,20 @@
+FROM alpine:latest
+
+# Minimal watchdog container — runs health checks on a schedule
+# Build: docker build -t sre-watchdog -f Dockerfile.watchdog .
+# Run:   docker run -d --name watchdog --network host sre-watchdog
+
+RUN apk add --no-cache bash curl openssl
+
+COPY scripts/sre-watchdog.sh /watchdog.sh
+COPY scripts/health-check.sh /health-check.sh
+COPY scripts/ssl-check.sh /ssl-check.sh
+
+RUN chmod +x /watchdog.sh /health-check.sh /ssl-check.sh
+
+# Run every 5 minutes via cron
+RUN echo "*/5 * * * * /watchdog.sh" > /etc/crontabs/root && \
+    echo "*/5 * * * * /health-check.sh" >> /etc/crontabs/root && \
+    echo "0 9 * * * /ssl-check.sh" >> /etc/crontabs/root
+
+CMD ["crond", "-f", "-l", "2"]

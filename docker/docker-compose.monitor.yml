@@ -1,0 +1,51 @@
+version: '3.8'
+
+# SRE Monitoring Stack — lightweight, runs alongside your apps
+# Usage: docker compose -f docker-compose.monitor.yml up -d
+
+services:
+  # ── Uptime Kuma — beautiful status page + monitoring ──
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+    restart: unless-stopped
+
+  # ── Dozzle — real-time Docker log viewer ──
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    ports:
+      - "8888:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+
+  # ── Watchtower — auto-update Docker containers ──
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 86400 --cleanup  # check daily
+    restart: unless-stopped
+
+  # ── cAdvisor — container resource monitoring ──
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    restart: unless-stopped
+
+volumes:
+  uptime-kuma-data:
