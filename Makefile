@@ -8,7 +8,7 @@ install:
 	@mkdir -p $(HERMES_SCRIPTS)
 	cp scripts/*.sh $(HERMES_SCRIPTS)/
 	chmod +x $(HERMES_SCRIPTS)/*.sh
-	@echo "✅ Done — scripts installed:"
+	@echo "✅ Done — scripts installed (8):"
 	@ls -1 $(HERMES_SCRIPTS)/*.sh
 
 # ── Test all scripts ───────────────────────────────────────
@@ -28,7 +28,9 @@ cron-setup:
 	hermes cron create --name "HTTP Health Check" --script health-check.sh --schedule "every 5m" --no-agent --deliver origin
 	hermes cron create --name "Docker Weekly Prune" --script docker-prune.sh --schedule "0 3 * * 0" --no-agent --deliver origin
 	hermes cron create --name "SSL Check" --script ssl-check.sh --schedule "0 9 * * *" --no-agent --deliver origin
-	@echo "✅ Cronjobs created"
+	hermes cron create --name "DB Backup" --script db-backup.sh --schedule "0 2 * * *" --no-agent --deliver origin
+	hermes cron create --name "Log Rotation" --script log-rotation.sh --schedule "0 4 * * 0" --no-agent --deliver origin
+	@echo "✅ All 6 cronjobs created"
 
 # ── Show cronjob status ────────────────────────────────────
 cron-list:
@@ -53,4 +55,7 @@ clean:
 	rm -f $(HERMES_SCRIPTS)/docker-prune.sh
 	rm -f $(HERMES_SCRIPTS)/ssl-check.sh
 	rm -f $(HERMES_SCRIPTS)/deploy-pm2.sh
+	rm -f $(HERMES_SCRIPTS)/deploy-k8s.sh
+	rm -f $(HERMES_SCRIPTS)/db-backup.sh
+	rm -f $(HERMES_SCRIPTS)/log-rotation.sh
 	@echo "✅ Cleaned"
